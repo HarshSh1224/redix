@@ -8,7 +8,7 @@ This project is a Java-based experiment in building a Redis-like in-memory datab
 
 Redis is a remarkable system: fast, simple, and surprisingly deep. Re-implementing key parts of it in Java helps understand:
 
-- RESP wire protocol
+- resp wire protocol
 - in-memory key/value storage
 - commands like SET, GET, DEL, EXISTS, and INCR
 - expiration and eviction policies
@@ -33,7 +33,7 @@ This project is intended as a learning and experimentation repo, so expect the i
 
 ## Roadmap
 
-- Basic TCP server and RESP parsing
+- Basic tcp server and resp parsing
 - Core key/value commands
 - Expiration and TTL support
 - Persistence and snapshotting
