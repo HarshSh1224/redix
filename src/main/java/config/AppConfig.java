@@ -38,4 +38,16 @@ public final class AppConfig {
     public static int getMaxConnections() {
         return getInt("server.maxConnections");
     }
+
+    public static int getMaxLineLength() {
+        return getInt("resp.max-line-length");
+    }
+
+    public static int getMaxBulkLength() {
+        return getInt("resp.max-bulk-length");
+    }
+
+    public static int getMaxArrayLength() {
+        return getInt("resp.max-array-length");
+    }
 }

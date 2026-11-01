@@ -9,12 +9,13 @@ import java.util.concurrent.Executors;
 public class Main {
     public static void main(String[] args) {
         System.out.println("Welcome to Redix!");
-//
-        try (TCPConnection tcpConnection = new TCPConnection();
-             ExecutorService executor =
-                 Executors.newFixedThreadPool(
-                     AppConfig.getMaxConnections()
-                 )
+
+        try (
+            ExecutorService executor =
+                Executors.newFixedThreadPool(
+                    AppConfig.getMaxConnections()
+                );
+            TCPConnection tcpConnection = new TCPConnection()
         ) {
             while (true) {
                 TCPClient client = tcpConnection.getNextClient();

@@ -7,7 +7,7 @@ import java.net.Socket;
 
 public class TCPClient implements AutoCloseable{
     private final Socket clientSocket;
-    public int id;
+    private final int id;
 
     public TCPClient(Socket socket, int id) {
         this.clientSocket = socket;
@@ -22,11 +22,16 @@ public class TCPClient implements AutoCloseable{
         return clientSocket.getOutputStream();
     }
 
+    public int getId() {
+        return id;
+    }
+
     @Override
     public void close() {
         if(clientSocket != null) {
             try {
                 clientSocket.close();
+                System.out.println("Connection " + id + " closed.");
             } catch (IOException e) {
                 System.out.println("Error closing connection: " + e.getMessage());
             }

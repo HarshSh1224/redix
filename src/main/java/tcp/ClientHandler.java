@@ -1,30 +1,28 @@
 package tcp;
 
-import java.io.IOException;
-import java.io.InputStream;
+import resp.RespDecoder;
+import java.util.List;
 
 public class ClientHandler implements Runnable{
     private final TCPClient client;
+    private final RespDecoder respDecoder;
 
     public ClientHandler(TCPClient client) {
         this.client = client;
+        this.respDecoder = new RespDecoder();
     }
 
     @Override
     public void run() {
-        try {
-            InputStream inputStream = client.getInputStream();
+        try (TCPClient ignored = client) {
+            System.out.println(
+                Thread.currentThread().getName()
+            );
 
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                String input = new String(buffer, 0, bytesRead).trim();
-                System.out.println(input);
-                client.getOutputStream().write("+PONG\r\n".getBytes());
-                client.getOutputStream().flush();
+            while (true) {
+                List<String> tokens = respDecoder.readTokens(client);
             }
-        } catch (IOException e) {
+        } catch (RuntimeException e) {
             System.out.println("Error processing command: " + e.getMessage());
         }
     }

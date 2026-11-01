@@ -33,12 +33,9 @@ public class TCPConnection implements AutoCloseable {
     @Override
     public void close() {
         try {
-            if (clientSocket != null) {
-                clientSocket.close();
-            }
-
             if (serverSocket != null) {
                 serverSocket.close();
+                System.out.println("Server socket closed.");
             }
         } catch (IOException e) {
             System.err.println("Error closing connections: " + e.getMessage());
