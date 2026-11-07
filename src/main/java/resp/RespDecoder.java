@@ -1,118 +1,108 @@
 package resp;
 
-import command.RedixCmd;
 import config.AppConfig;
-import tcp.TCPClient;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 public class RespDecoder {
 
-    public List<String> readTokens(TCPClient client) throws RuntimeException {
-        InputStream inputStream = null;
-        try {
-            inputStream = client.getInputStream();
+    public record DecodeResult(RespValue value, int index) {}
 
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                String input = new String(buffer, 0, bytesRead).trim();
-                System.out.println(input);
-
-                if(input.isEmpty()) {
-                    continue;
-                }
-
-                OutputStream outputStream = client.getOutputStream();
-                outputStream.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
-                outputStream.flush();
-            }
-            return new ArrayList<>();
-        } catch (IOException e) {
-            throw new RuntimeException("IO Exception while reading inputStream: " + e.getMessage());
+    public DecodeResult decodeOne(String data, int startIndex) throws IOException {
+        if(startIndex >= data.length()) {
+            throw new IOException("Error parsing input: startIndex out of bounds: " + startIndex + " out of: " + data.length());
         }
-    }
-
-    private RespValue decode(String data) throws IOException{
-        return switch (data.charAt(0)) {
-            case '+' -> decodeString(data);
-            case ':' -> decodeInteger(data);
-            case '$' -> decodeBulkString(data);
-            case '*' -> decodeArray(data);
-            case '-' -> decodeString(data);
-            default -> throw new IOException("unknown RESP prefix: " + data.charAt(0));
+        return switch (data.charAt(startIndex)) {
+            case '+' -> decodeString(data, startIndex);
+            case ':' -> decodeInteger(data, startIndex);
+            case '$' -> decodeBulkString(data, startIndex);
+            case '*' -> decodeArray(data, startIndex);
+            case '-' -> decodeError(data, startIndex);
+            default -> throw new IOException("unknown RESP prefix: " + data.charAt(startIndex));
         };
     }
 
-    private RespValue.RespString decodeString(String data) throws IOException {
-        int length = data.length();
-
-        if(length > AppConfig.getMaxLineLength()) {
-            throw new IOException("Invalid string length: " + length);
-        }
+    private DecodeResult decodeString(String data, int startIndex) throws IOException {
 
         StringBuilder result = new StringBuilder();
 
-        for(int i = 1; i < length; i++){
-            if(data.charAt(i) == '\r') {
-                if(i == length - 1 || data.charAt(i+1) != '\n') throw new IOException("Read failed! Invalid terminating CRLF found");
-                break;
+        for (int i = startIndex + 1; i < data.length(); i++) {
+            if(i + 1 == AppConfig.getMaxLineLength())
+                throw new IOException("Input exceeds line length limit");
+
+            if (data.charAt(i) == '\r') {
+                if (i == data.length() - 1 || data.charAt(i + 1) != '\n')
+                    throw new IOException("Read failed! Invalid terminating CRLF found");
+                return new DecodeResult(new RespValue.RespString(result.toString()), i + 1);
+            } else {
+                result.append(data.charAt(i));
             }
-            result.append(data.charAt(i));
         }
-        return new RespValue.RespString(result.toString());
+        throw new IOException("Read failed! Terminating CRLF not found!");
     }
 
-    private RespValue.RespInteger decodeInteger(String data) throws IOException {
+    private DecodeResult decodeInteger(String data, int startIndex) throws IOException {
         int length = data.length();
 
         long result = 0;
 
-        for(int i = 1; i < length; i++){
-            if(data.charAt(i) == '\r') {
-                if(i == length - 1 || data.charAt(i+1) != '\n') throw new IOException("Read failed! Invalid terminating CRLF found");
-                break;
+        for (int i = startIndex + 1; i < length; i++) {
+            // TODO: ADD LIMIT CHECK
+            if (data.charAt(i) == '\r') {
+                if (i == length - 1 || data.charAt(i + 1) != '\n')
+                    throw new IOException("Read failed! Invalid terminating CRLF found");
+                return new DecodeResult(new RespValue.RespInteger(result), i + 1);
             }
             result += result * 10 + (data.charAt(i) - '0');
         }
-        return new RespValue.RespInteger(result);
+        throw new IOException("Read failed! Terminating CRLF not found!");
     }
 
-    private RespValue decodeBulkString(String data) throws IOException {
+    private DecodeResult decodeBulkString(String data, int startIndex) throws IOException {
         int length = data.length();
-        int strLen = 0;
+        var sizeDecode = decodeInteger(data, startIndex);
 
-        int i = 0;
+        long strLen = ((RespValue.RespInteger)sizeDecode.value).value();
+        startIndex = sizeDecode.index + 1;
 
-        while(data.charAt(++i) >= '0' && data.charAt(i) <= '9'){
-            strLen += strLen * 10 + (data.charAt(i) - '0');
+        if(startIndex + strLen + 1 >= data.length()) {
+            throw new IOException("Incomplete bulk string");
         }
 
-        if(data.charAt(i) != '\r' || i >= length-1 || data.charAt(++i) != '\n') throw new IOException("Read failed! Invalid terminating CRLF found");
-        else i++;
-
-        if(strLen > AppConfig.getMaxBulkLength()) {
+        if (strLen > AppConfig.getMaxBulkLength()) {
             throw new IOException("Invalid bulk string length: " + length);
         }
 
         StringBuilder result = new StringBuilder();
 
-        while (strLen-- > 0 ) {
+        int i = startIndex;
+        while (strLen-- > 0) {
             result.append(data.charAt(i++));
         }
-        if(data.charAt(i) != '\r' || i >= length-1 || data.charAt(++i) != '\n') throw new IOException("Read failed! Invalid terminating CRLF found");
-        else return new RespValue.RespString(result.toString());
+        if (data.charAt(i) != '\r' || i >= length - 1 || data.charAt(++i) != '\n')
+            throw new IOException("Read failed! Invalid terminating CRLF found");
+        else return new DecodeResult(new RespValue.RespBulkString(result.toString()), i);
     }
 
-    private RespValue decodeArray(String data) {
-        // TODO: Implement
-        return new RespValue.RespArray(new ArrayList<>());
+    private DecodeResult decodeArray(String data, int startIndex) throws IOException {
+        var sizeDecode = decodeInteger(data, startIndex);
+        long size = ((RespValue.RespInteger)sizeDecode.value).value();
+        startIndex = sizeDecode.index + 1;
+
+        List<RespValue> result = new ArrayList<>();
+
+        for (int i = 0; i < size; i++) {
+            var decodeItem = decodeOne(data, startIndex);
+            result.add(decodeItem.value);
+            startIndex = decodeItem.index + 1;
+        }
+        return new DecodeResult(new RespValue.RespArray(result), startIndex);
     }
 
+    private DecodeResult decodeError(String data, int startIndex) throws IOException {
+        var stringDecode = decodeString(data, startIndex);
+        return new DecodeResult(new RespValue.RespError(((RespValue.RespString)stringDecode.value).value()), stringDecode.index);
+    }
 }
