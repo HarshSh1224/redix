@@ -1,6 +1,9 @@
 package tcp;
 
+import command.CommandHandler;
+import command.RedixCmd;
 import resp.RespDecoder;
+import resp.RespEncoder;
 import resp.RespValue;
 
 import java.io.IOException;
@@ -11,10 +14,14 @@ import java.nio.charset.StandardCharsets;
 public class ClientHandler implements Runnable {
     private final TCPClient client;
     private final RespDecoder respDecoder;
+    private final RespEncoder respEncoder;
+    private final CommandHandler commandHandler;
 
     public ClientHandler(TCPClient client) {
         this.client = client;
+        this.respEncoder = new RespEncoder();
         this.respDecoder = new RespDecoder();
+        this.commandHandler = new CommandHandler();
     }
 
     @Override
@@ -44,10 +51,10 @@ public class ClientHandler implements Runnable {
                         readIndex = result.index();
 
                         // Execute command here
-                        System.out.println(value);
+                        RedixCmd command = RedixCmd.from(value);
+                        RespValue response = commandHandler.handleCommand(command);
 
-                        outputStream.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
-                        outputStream.flush();
+                        outputStream.write(respEncoder.encodeResp(response).getBytes(StandardCharsets.UTF_8));
                     } catch (IOException e) {
                         break;
                     }
