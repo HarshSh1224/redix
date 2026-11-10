@@ -55,7 +55,7 @@ public class RespDecoder {
                     throw new IOException("Read failed! Invalid terminating CRLF found");
                 return new DecodeResult(new RespValue.RespInteger(result), i + 1);
             }
-            result += result * 10 + (data.charAt(i) - '0');
+            result = result * 10 + (data.charAt(i) - '0');
         }
         throw new IOException("Read failed! Terminating CRLF not found!");
     }
@@ -106,3 +106,5 @@ public class RespDecoder {
         return new DecodeResult(new RespValue.RespError(((RespValue.RespString)stringDecode.value).value()), stringDecode.index);
     }
 }
+
+// *1\r\n$4\r\nECHO\r\n*2\r\n$4\r\nECHO\r\n$4\r\nPING\r\n
