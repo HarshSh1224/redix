@@ -5,6 +5,7 @@ import command.RedixCmd;
 import resp.RespDecoder;
 import resp.RespEncoder;
 import resp.RespValue;
+import store.KeyValueStore;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,11 +18,11 @@ public class ClientHandler implements Runnable {
     private final RespEncoder respEncoder;
     private final CommandHandler commandHandler;
 
-    public ClientHandler(TCPClient client) {
+    public ClientHandler(TCPClient client, KeyValueStore store) {
         this.client = client;
         this.respEncoder = new RespEncoder();
         this.respDecoder = new RespDecoder();
-        this.commandHandler = new CommandHandler();
+        this.commandHandler = new CommandHandler(store);
     }
 
     @Override
