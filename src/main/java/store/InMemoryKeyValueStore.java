@@ -7,12 +7,15 @@ public class InMemoryKeyValueStore implements KeyValueStore {
     private final ConcurrentHashMap<String, StoredValue> store = new ConcurrentHashMap<>();
 
     @Override
-    public void set(String key, String value) {
-        store.put(key, new StoredValue(value, -1));
+    public void set(String key, String value, Long expiresAt) {
+        store.put(key, new StoredValue(value, expiresAt == null ? -1 : expiresAt));
     }
 
     @Override
     public String get(String key) {
+        long ttl = ttl(key);
+        if (ttl == -2) return null;
+
         return store.get(key).value();
     }
 
@@ -33,12 +36,14 @@ public class InMemoryKeyValueStore implements KeyValueStore {
 
     @Override
     public long ttl(String key) {
-        long expiresAt = store.getOrDefault(key, new StoredValue("", -2)).expiresAt();
+        StoredValue storedValue = store.getOrDefault(key, new StoredValue("", -2));
+
+        long expiresAt = storedValue.expiresAt();
         if (expiresAt == -1 || expiresAt == -2) return expiresAt;
         long remaining = expiresAt - System.nanoTime();
 
         if (remaining <= 0) {
-            store.remove(key);
+            store.remove(key, storedValue);
             return -2;
         }
 

@@ -15,7 +15,7 @@ public class RespEncoder {
                 for(var val: a.value()) {
                     result.append(encodeResp(val));
                 }
-                yield "*%d\r\n%s\r\n".formatted(a.value().size(), result.toString());
+                yield "*%d\r\n%s".formatted(a.value().size(), result.toString());
             }
 
             case RespValue.RespError e -> "-%s\r\n".formatted(e.message());

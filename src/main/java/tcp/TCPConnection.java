@@ -7,22 +7,21 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class TCPConnection implements AutoCloseable {
-    Socket clientSocket;
-    ServerSocket serverSocket;
-    int id = 0;
+    private final ServerSocket serverSocket;
+    private int id = 0;
 
     public TCPConnection() {
         try {
             serverSocket = new ServerSocket(AppConfig.getServerPort());
         } catch (IOException e) {
-            throw new RuntimeException("Error creating server connection: " + e.toString());
+            throw new RuntimeException("Error creating server connection: " + e.getMessage());
         }
     }
 
     public TCPClient getNextClient() {
         try {
             System.out.println("Waiting for a new connection...");
-            clientSocket = serverSocket.accept();
+            Socket clientSocket = serverSocket.accept();
             System.out.println("Connection Established!");
             return new TCPClient(clientSocket, id++);
         } catch (IOException e) {

@@ -49,7 +49,7 @@ public class ClientHandler implements Runnable {
                             respDecoder.decodeOne(inputBuffer.toString(), readIndex);
 
                         RespValue value = result.value();
-                        readIndex = result.index();
+                        readIndex = result.index() + 1;
 
                         // Execute command here
                         RedixCmd command = RedixCmd.from(value);
