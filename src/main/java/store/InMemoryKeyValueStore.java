@@ -13,25 +13,27 @@ public class InMemoryKeyValueStore implements KeyValueStore {
 
     @Override
     public String get(String key) {
-        long ttl = ttl(key);
-        if (ttl == -2) return null;
-
-        return store.get(key).value();
+        return isExpiredOrAbsent(key) ? null : store.get(key).value();
     }
 
     @Override
     public boolean delete(String key) {
-        return store.remove(key) != null;
+        return !isExpiredOrAbsent(key) && store.remove(key) != null;
     }
 
     @Override
     public boolean exists(String key) {
-        return store.containsKey(key);
+        return !isExpiredOrAbsent(key);
     }
 
     @Override
-    public void expire(String key, long expiresAt) {
-        store.computeIfPresent(key, (k, current) -> new StoredValue(current.value(), expiresAt));
+    public boolean expire(String key, Long expiresAt) {
+        if (!isExpiredOrAbsent(key) && expiresAt != null) {
+            store.computeIfPresent(key, (k, current) -> new StoredValue(current.value(), expiresAt));
+            return true;
+        }
+        return false;
+
     }
 
     @Override
@@ -45,8 +47,10 @@ public class InMemoryKeyValueStore implements KeyValueStore {
         if (remaining <= 0) {
             store.remove(key, storedValue);
             return -2;
-        }
+        } else return TimeUnit.NANOSECONDS.toSeconds(remaining);
+    }
 
-        else return TimeUnit.NANOSECONDS.toSeconds(remaining);
+    private boolean isExpiredOrAbsent(String key) {
+        return ttl(key) == -2;
     }
 }

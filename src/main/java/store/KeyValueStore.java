@@ -5,6 +5,6 @@ public interface KeyValueStore {
     String get(String key);
     boolean delete(String key);
     boolean exists(String key);
-    void expire(String key, long expiresAt);
+    boolean expire(String key, Long expiresAt);
     long ttl(String key);
 }

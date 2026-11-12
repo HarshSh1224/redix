@@ -24,6 +24,8 @@ public class CommandHandler {
             case "SET" -> handleSet(command);
             case "GET" -> handleGet(command);
             case "TTL" -> handleTTL(command);
+            case "DEL" -> handleDel(command);
+            case "EXPIRE" -> handleExpire(command);
             default -> new RespValue.RespError("ERR unknown command");
         };
     }
@@ -87,5 +89,40 @@ public class CommandHandler {
         store.set(key, val, expiry);
 
         return new RespValue.RespString("OK");
+    }
+
+    private RespValue handleDel(RedixCmd command) {
+        var args = command.args();
+
+        if (args.length == 0) {
+            return new RespValue.RespError("ERR wrong number of arguments for 'del' command");
+        }
+
+        long count = 0L;
+
+        for (String key : args) {
+            if (store.delete(key)) count++;
+        }
+
+        return new RespValue.RespInteger(count);
+    }
+
+    private RespValue handleExpire(RedixCmd command) {
+        var args = command.args();
+
+        if (args.length != 2) {
+            return new RespValue.RespError("ERR wrong number of arguments for 'expire' command");
+        }
+
+        String key = args[0];
+
+        try {
+            long expireInSec = Long.parseLong(args[1]);
+            long expiresAt = System.nanoTime() + TimeUnit.SECONDS.toNanos(expireInSec);
+
+            return new RespValue.RespInteger(store.expire(key, expiresAt) ? 1 : 0);
+        } catch (NumberFormatException e) {
+            return new RespValue.RespError("ERR value is not an integer or out of range");
+        }
     }
 }
