@@ -50,4 +50,8 @@ public final class AppConfig {
     public static int getMaxArrayLength() {
         return getInt("resp.max-array-length");
     }
+
+    public static int getActiveExpireIntervalMs() {
+        return getInt("store.active_expire_interval_ms");
+    }
 }

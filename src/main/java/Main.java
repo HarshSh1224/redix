@@ -7,6 +7,8 @@ import tcp.TCPConnection;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
     public static void main(String[] args) {
@@ -18,8 +20,18 @@ public class Main {
                 Executors.newFixedThreadPool(
                     AppConfig.getMaxConnections()
                 );
+            ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
             TCPConnection tcpConnection = new TCPConnection()
         ) {
+            // Cache cleanup cron job
+            scheduler.scheduleWithFixedDelay(
+                store::runActiveExpiration,
+                0,
+                AppConfig.getActiveExpireIntervalMs(),
+                TimeUnit.MILLISECONDS
+            );
+
+            // Listen and handle clients
             while (true) {
                 TCPClient client = tcpConnection.getNextClient();
                 executor.submit(new ClientHandler(client, store));

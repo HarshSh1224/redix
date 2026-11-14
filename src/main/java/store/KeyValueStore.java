@@ -7,4 +7,5 @@ public interface KeyValueStore {
     boolean exists(String key);
     boolean expire(String key, Long expiresAt);
     long ttl(String key);
+    void runActiveExpiration();
 }

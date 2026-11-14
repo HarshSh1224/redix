@@ -53,4 +53,30 @@ public class InMemoryKeyValueStore implements KeyValueStore {
     private boolean isExpiredOrAbsent(String key) {
         return ttl(key) == -2;
     }
+
+    @Override
+    public void runActiveExpiration() {
+        int LIMIT = 20; // Mathematically derived
+        int limit = LIMIT;
+        int deleted = 0;
+
+        while (limit > 0) {
+            for (var entry : store.entrySet()) {
+                long entryExpiresAt = entry.getValue().expiresAt();
+                if (entryExpiresAt != -1) {
+                    limit--;
+                    if (System.nanoTime() >= entryExpiresAt) {
+                        store.remove(entry.getKey(), entry.getValue());
+                        deleted++;
+                    }
+                }
+            }
+        }
+
+        float fractionDeleted = (float) deleted / LIMIT;
+
+        if (fractionDeleted > 0.25) {
+            runActiveExpiration();
+        }
+    }
 }
