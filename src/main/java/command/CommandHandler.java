@@ -12,7 +12,7 @@ public class CommandHandler {
         this.store = store;
     }
 
-    public RespValue handleCommand(RedixCmd command) {
+    public RespValue evalCommand(RedixCmd command) {
         return switch (command.command()) {
             case "PING" -> new RespValue.RespString("PONG");
             case "ECHO" -> {

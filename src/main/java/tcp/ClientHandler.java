@@ -7,6 +7,7 @@ import resp.RespEncoder;
 import resp.RespValue;
 import store.KeyValueStore;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -43,6 +44,8 @@ public class ClientHandler implements Runnable {
 
                 int readIndex = 0;
 
+                ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
+
                 while (readIndex < inputBuffer.length()) {
                     try {
                         RespDecoder.DecodeResult result =
@@ -51,19 +54,26 @@ public class ClientHandler implements Runnable {
                         RespValue value = result.value();
                         readIndex = result.index() + 1;
 
-                        // Execute command here
                         RedixCmd command = RedixCmd.from(value);
-                        RespValue response = commandHandler.handleCommand(command);
+                        RespValue response = commandHandler.evalCommand(command);
 
-                        outputStream.write(respEncoder.encodeResp(response).getBytes(StandardCharsets.UTF_8));
+                        responseBuffer.write(
+                            respEncoder.encodeResp(response)
+                                .getBytes(StandardCharsets.UTF_8)
+                        );
+
                     } catch (IOException e) {
                         break;
                     }
                 }
 
-                // Discard successfully decoded data.
                 if (readIndex > 0) {
                     inputBuffer.delete(0, readIndex);
+                }
+
+                if (responseBuffer.size() > 0) {
+                    responseBuffer.writeTo(outputStream);
+                    outputStream.flush();
                 }
             }
 
