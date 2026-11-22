@@ -1,5 +1,12 @@
 package store;
 
+import config.AppConfig;
+import resp.RespEncoder;
+import resp.RespValue;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -77,6 +84,27 @@ public class InMemoryKeyValueStore implements KeyValueStore {
 
         if (fractionDeleted > 0.25) {
             runActiveExpiration();
+        }
+    }
+
+    @Override
+    public void rewriteAOF() throws IOException {
+        try (FileWriter writer = new FileWriter(AppConfig.getAOFFileName(), true)) {
+            for (var entry : store.entrySet()) {
+                String command = "SET %s %s".formatted(entry.getKey(), entry.getValue().value());
+
+                RespEncoder respEncoder = new RespEncoder();
+
+                writer.write(respEncoder.encodeResp(new RespValue.RespArray(
+                    Arrays.stream(command.split("\\s+"))
+                        .map(RespValue.RespString::new)
+                        .map(s -> (RespValue) s)
+                        .toList()
+                )));
+            }
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+            throw e;
         }
     }
 }

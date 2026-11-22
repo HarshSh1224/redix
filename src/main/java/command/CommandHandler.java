@@ -26,6 +26,7 @@ public class CommandHandler {
             case "TTL" -> handleTTL(command);
             case "DEL" -> handleDel(command);
             case "EXPIRE" -> handleExpire(command);
+            case "BGREWRITEAOF" -> handleRewriteAOF(command);
             default -> new RespValue.RespError("ERR unknown command");
         };
     }
@@ -123,6 +124,15 @@ public class CommandHandler {
             return new RespValue.RespInteger(store.expire(key, expiresAt) ? 1 : 0);
         } catch (NumberFormatException e) {
             return new RespValue.RespError("ERR value is not an integer or out of range");
+        }
+    }
+
+    private RespValue handleRewriteAOF(RedixCmd command) {
+        try {
+            store.rewriteAOF();
+            return new RespValue.RespString("OK");
+        } catch (Exception e) {
+            return new RespValue.RespError("ERR " + e.getClass());
         }
     }
 }

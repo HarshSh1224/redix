@@ -54,4 +54,8 @@ public final class AppConfig {
     public static int getActiveExpireIntervalMs() {
         return getInt("store.active_expire_interval_ms");
     }
+
+    public static String getAOFFileName() {
+        return getString("store.aof_filename");
+    }
 }

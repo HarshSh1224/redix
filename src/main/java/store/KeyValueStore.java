@@ -1,5 +1,7 @@
 package store;
 
+import java.io.IOException;
+
 public interface KeyValueStore {
     void set(String key, String value, Long expiresAt);
     String get(String key);
@@ -8,4 +10,5 @@ public interface KeyValueStore {
     boolean expire(String key, Long expiresAt);
     long ttl(String key);
     void runActiveExpiration();
+    void rewriteAOF() throws IOException;
 }
